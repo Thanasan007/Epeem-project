@@ -1,0 +1,6 @@
+{
+  "name": "Epeem Gallery",
+  "description": "A modern photo gallery application inspired by ThaiRun's UI. It allows organizing photos into albums, with admin management and a powerful AI-driven face search feature.",
+  "requestFramePermissions": [],
+  "prompt": ""
+}

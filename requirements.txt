@@ -1,0 +1,2 @@
+# Python dependencies for the face search script
+google-generativeai
