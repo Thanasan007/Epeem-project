@@ -26,5 +26,4 @@ export type Modal =
   | 'NONE'
   | 'LOGIN'
   | 'CREATE_ALBUM'
-  | 'API_KEY'
   | { type: 'VIEW_PHOTO'; photo: Photo; albumId: string };

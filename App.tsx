@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect, useCallback, useMemo, createContext, useContext, useReducer, useRef } from 'react';
 import { Photo, Album, User, View, Modal } from './types';
 import { findMatchingFaces, findPhotosByDescription } from './services/geminiService';
@@ -250,50 +251,6 @@ const CreateAlbumModal = ({ setModal }: { setModal: (modal: Modal) => void }) =>
             </button>
         </form>
       </ModalContainer>
-    );
-};
-
-const ApiKeyModal = ({ setModal }: { setModal: (modal: Modal) => void }) => {
-    const [apiKey, setApiKey] = useState(() => localStorage.getItem('gemini-api-key') || '');
-
-    const handleSave = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (apiKey.trim()) {
-            localStorage.setItem('gemini-api-key', apiKey.trim());
-            alert('บันทึก API Key เรียบร้อยแล้ว');
-            setModal('NONE');
-        } else {
-            localStorage.removeItem('gemini-api-key');
-            alert('ลบ API Key เรียบร้อยแล้ว');
-            setModal('NONE');
-        }
-    };
-    
-    return (
-        <ModalContainer onClose={() => setModal('NONE')}>
-            <h2 className="text-2xl font-bold mb-2 text-center text-gray-900">ตั้งค่า Gemini API Key</h2>
-            <p className="text-center text-gray-500 mb-6 text-sm">
-                API Key ของคุณจะถูกเก็บไว้ในเบราว์เซอร์ของคุณเท่านั้น
-            </p>
-            <form onSubmit={handleSave}>
-                <input
-                    type="password"
-                    value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
-                    placeholder="กรอก Google Gemini API Key ของคุณ"
-                    className="w-full p-3 bg-gray-100 border border-gray-300 rounded-lg text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-action"
-                />
-                <p className="text-xs text-gray-500 mt-2">
-                    คุณสามารถรับ API Key ได้จาก{' '}
-                    <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-brand-link hover:underline">
-                        Google AI Studio
-                    </a>.
-                </p>
-                <button type="submit" className="w-full mt-6 bg-brand-action hover:bg-brand-action-hover text-white font-bold py-3 px-4 rounded-lg transition-all duration-300 transform hover:scale-105">
-                    บันทึก
-                </button>
-            </form>
-        </ModalContainer>
     );
 };
 
@@ -672,13 +629,6 @@ const Header = ({ setModal, setView }: { setModal: (modal: Modal) => void; setVi
                                     <p className="font-semibold text-sm truncate text-gray-800">{user.email}</p>
                                     <p className="text-xs text-gray-500">{user.isAdmin ? 'Admin' : 'User'}</p>
                                 </div>
-                                <button
-                                    onClick={() => { setModal('API_KEY'); setUserMenuOpen(false); }}
-                                    className="w-full text-left flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
-                                >
-                                    <Icons.key className="w-5 h-5" />
-                                    ตั้งค่า API Key
-                                </button>
                                 <div className="border-t border-gray-100 my-1"></div>
                                 <button
                                     onClick={handleImportClick}
@@ -716,7 +666,7 @@ const Header = ({ setModal, setView }: { setModal: (modal: Modal) => void; setVi
     );
 };
 
-const SearchControlBar = ({ setView, setModal }: { setView: (view: View) => void, setModal: (modal: Modal) => void }) => {
+const SearchControlBar = ({ setView }: { setView: (view: View) => void }) => {
     const { state } = useAppContext();
     const { albums } = state;
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -725,23 +675,12 @@ const SearchControlBar = ({ setView, setModal }: { setView: (view: View) => void
     const [textQuery, setTextQuery] = useState("");
 
     const handleFaceSearchClick = () => {
-        const apiKey = localStorage.getItem('gemini-api-key');
-        if (!apiKey) {
-            alert('โปรดตั้งค่า Gemini API Key ของคุณก่อนใช้งานฟังก์ชันนี้');
-            setModal('API_KEY');
-            return;
-        }
         fileInputRef.current?.click();
     };
 
     const handleSearchFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
-
-        const apiKey = localStorage.getItem('gemini-api-key');
-        if (!apiKey) {
-            return;
-        }
 
         setIsSearching(true);
         setSearchProgress(0);
@@ -752,14 +691,11 @@ const SearchControlBar = ({ setView, setModal }: { setView: (view: View) => void
             if (queryImage) {
                 try {
                     const allPhotos = albums.flatMap(a => a.photos);
-                    const results = await findMatchingFaces(apiKey, queryImage, allPhotos, setSearchProgress);
+                    const results = await findMatchingFaces(queryImage, allPhotos, setSearchProgress);
                     setView({type: 'SEARCH_RESULTS', results, queryType: 'face', query: queryImage});
                 } catch (error) {
                     console.error("Face search failed:", error);
                     alert(`เกิดข้อผิดพลาดในการค้นหา: ${error instanceof Error ? error.message : String(error)}`);
-                    if (error instanceof Error && error.message.includes('API Key')) {
-                        setModal('API_KEY');
-                    }
                 } finally {
                     setIsSearching(false);
                 }
@@ -777,25 +713,16 @@ const SearchControlBar = ({ setView, setModal }: { setView: (view: View) => void
             alert("กรุณาป้อนคำเพื่อค้นหา");
             return;
         }
-        const apiKey = localStorage.getItem('gemini-api-key');
-        if (!apiKey) {
-            alert('โปรดตั้งค่า Gemini API Key ของคุณก่อนใช้งานฟังก์ชันนี้');
-            setModal('API_KEY');
-            return;
-        }
 
         setIsSearching(true);
         setSearchProgress(0);
         try {
             const allPhotos = albums.flatMap(a => a.photos);
-            const results = await findPhotosByDescription(apiKey, textQuery, allPhotos, setSearchProgress);
+            const results = await findPhotosByDescription(textQuery, allPhotos, setSearchProgress);
             setView({type: 'SEARCH_RESULTS', results, queryType: 'text', query: textQuery});
         } catch (error) {
             console.error("Text search failed:", error);
             alert(`เกิดข้อผิดพลาดในการค้นหา: ${error instanceof Error ? error.message : String(error)}`);
-            if (error instanceof Error && error.message.includes('API Key')) {
-                setModal('API_KEY');
-            }
         } finally {
             setIsSearching(false);
         }
@@ -901,7 +828,6 @@ function App() {
   const renderModal = () => {
       if (modal === 'LOGIN') return <LoginModal setModal={setModal} />;
       if (modal === 'CREATE_ALBUM') return <CreateAlbumModal setModal={setModal} />;
-      if (modal === 'API_KEY') return <ApiKeyModal setModal={setModal} />;
       if (typeof modal === 'object' && modal.type === 'VIEW_PHOTO') return <ImageViewModal modal={modal} setModal={setModal} />;
       return null;
   }
@@ -910,7 +836,7 @@ function App() {
     <AppContext.Provider value={{ state, dispatch }}>
       <div className="min-h-screen flex flex-col bg-brand-gray">
         <Header setModal={setModal} setView={setView} />
-        {view.type === 'ALBUM_GRID' && <SearchControlBar setView={setView} setModal={setModal} />}
+        {view.type === 'ALBUM_GRID' && <SearchControlBar setView={setView} />}
         <main className="flex-grow">
           {renderView()}
         </main>
